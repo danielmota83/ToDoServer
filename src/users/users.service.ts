@@ -1,9 +1,10 @@
+/* eslint-disable prettier/prettier */
 import { Model } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './entities/user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDto } from './dto/createUserDto';
+import { UpdateUserDto } from './dto/updateUserDto';
 
 @Injectable()
 export class UsersService {
