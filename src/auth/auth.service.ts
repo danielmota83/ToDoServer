@@ -1,31 +1,35 @@
 import { Injectable } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { Response } from 'express';
+import { UserResponse } from '../users/dto/response/user-response.dto';
+
+export interface TokenPayload {
+  userId: string;
+}
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
-    private jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
-    const isMatch = await bcrypt.compare(pass, user.password);
-
-    if (user && isMatch) {
-      const { password, ...result } = user;
-      return result;
-    }
-    return null;
-  }
-
-  async login(user: any) {
-    const payload = { username: user._doc.email, sub: user._doc._id };
-
-    return {
-      access_token: this.jwtService.sign(payload),
+  async login(user: UserResponse, response: Response): Promise<void> {
+    const tokenPayload: TokenPayload = {
+      userId: user._id,
     };
+
+    const expires = new Date();
+    expires.setSeconds(
+      expires.getSeconds() + this.configService.get('JWT_EXPIRATION_TIME'),
+    );
+
+    const token = this.jwtService.sign(tokenPayload);
+
+    response.cookie('Authentication', token, {
+      httpOnly: true,
+      expires,
+    });
   }
 }
