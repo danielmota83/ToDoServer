@@ -1,38 +1,64 @@
-/* eslint-disable prettier/prettier */
-import { Model } from 'mongoose';
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from './entities/user.entity';
-import { CreateUserDto } from './dto/createUserDto';
-import { UpdateUserDto } from './dto/updateUserDto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { hash, compare } from 'bcrypt';
+import { CreateUserRequest } from './dto/request/create-user-request.dto';
+import { UserResponse } from './dto/response/user-response.dto';
+import { User, userDocument } from './models/User';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
-  create(createUserDto: CreateUserDto) {
-    const createdUser = new this.userModel(createUserDto);
-    return createdUser.save();
+  constructor(private readonly usersRepository: UsersRepository) {}
+
+  async createUser(
+    createUserRequest: CreateUserRequest,
+  ): Promise<UserResponse> {
+    await this.validateCreateUserRequest(createUserRequest);
+    const user = await this.usersRepository.insertOne({
+      ...createUserRequest,
+      password: await hash(createUserRequest.password, 10),
+    });
+    return this.buildResponse(user);
   }
 
-  findAll() {
-    return this.userModel.find().exec();
+  private async validateCreateUserRequest(
+    createUserRequest: CreateUserRequest,
+  ): Promise<void> {
+    const user = await this.usersRepository.findOneByEmail(
+      createUserRequest.email,
+    );
+    if (user) {
+      throw new BadRequestException('This email already exists.');
+    }
   }
 
-  findOne(id: string) {
-    return this.userModel.findOne({ _id: id }).exec();
+  async validateUser(email: string, password: string): Promise<UserResponse> {
+    const user = await this.usersRepository.findOneByEmail(email);
+    if (!user) {
+      throw new NotFoundException(`User does not  exist by email: '${email}'.`);
+    }
+    const passwordIsValid = await compare(password, user.password);
+    if (!passwordIsValid) {
+      throw new NotFoundException('Credentials are invalid');
+    }
+    return this.buildResponse(user);
   }
 
-  findByEmail(email: string) {
-    return this.userModel.findOne({ email }).exec();
+  async getUserById(userId: string): Promise<UserResponse> {
+    const user = await this.usersRepository.findOneById(userId);
+    if (!user) {
+      throw new NotFoundException(`User not found by _id: '${userId}'.`);
+    }
+    return this.buildResponse(user);
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
-    return this.userModel
-      .findByIdAndUpdate({ _id: id }, { $set: updateUserDto }, { new: true })
-      .exec();
-  }
-
-  remove(id: string) {
-    return this.userModel.findByIdAndDelete({ _id: id }).exec();
+  private buildResponse(user: any): UserResponse {
+    return {
+      _id: user._id.toHexString(),
+      email: user.email,
+    };
   }
 }
