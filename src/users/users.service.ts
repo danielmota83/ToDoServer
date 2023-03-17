@@ -6,7 +6,6 @@ import {
 import { hash, compare } from 'bcrypt';
 import { CreateUserRequest } from './dto/request/create-user-request.dto';
 import { UserResponse } from './dto/response/user-response.dto';
-import { User, userDocument } from './models/User';
 import { UsersRepository } from './users.repository';
 
 @Injectable()

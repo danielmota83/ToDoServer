@@ -1,14 +1,11 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpStatus,
   Param,
   Post,
-  UploadedFiles,
   Put,
-  Req,
   Res,
 } from '@nestjs/common';
 import { Task } from 'src/model/task.schema';
